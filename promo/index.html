@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>启动器启动器 · 宣传片</title>
+<style>
+  html, body { margin: 0; background: #0b0d10; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script type="module" src="./preview.js"></script>
+<script type="module">
+import { DUR, CUES, SHOTS, b } from './timeline.js';
+import { seg, lerp, clamp, ease, glide, snap, whip, spring, springTo, stagger, stageSize, setupCanvas, loadFonts, loadImage } from './motion.js';
+
+const { W, H } = stageSize();
+const ctx = setupCanvas(document.getElementById('c'), W, H);
+const U = Math.min(W / 1920, H / 1080);
+
+// ── system ──
+const PAPER = '#F1EFE9', INK = '#121212', MUT = '#6E6A60', LINE = 'rgba(18,18,18,0.16)', SIG = '#2E6BFF';
+const CN = '"Microsoft YaHei UI","Microsoft YaHei","PingFang SC",sans-serif';
+const MONO = '"Cascadia Mono","Consolas","DejaVu Sans Mono",monospace';
+const font = (w, s, f = CN) => `${w} ${s * U}px ${f}`;
+
+const M = 96 * U, GUT = 24 * U, COLS = 12;
+const colW = (W - 2 * M - GUT * (COLS - 1)) / COLS;
+const colX = i => M + i * (colW + GUT);
+
+const IMG = {};
+
+// ── primitives ──
+function text(str, x, y, { f = font(400, 24), color = INK, align = 'left', base = 'alphabetic', ls = 0 } = {}) {
+  ctx.font = f; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = base;
+  ctx.letterSpacing = ls ? `${ls * U}px` : '0px';
+  ctx.fillText(str, x, y);
+  ctx.letterSpacing = '0px';
+}
+function measure(str, f, ls = 0) {
+  ctx.font = f; ctx.letterSpacing = ls ? `${ls * U}px` : '0px';
+  const w = ctx.measureText(str).width; ctx.letterSpacing = '0px'; return w;
+}
+function rule(x0, x1, y, color = LINE, h = 1) { ctx.fillStyle = color; ctx.fillRect(x0, y, x1 - x0, Math.max(1, h * U)); }
+function clipUp(x, y, w, h, k) {           // mask reveal from the baseline up
+  ctx.beginPath(); ctx.rect(x, y + h - h * k, w, h * k); ctx.clip();
+}
+
+/** fit a cropped screenshot into a cell that hugs the right page edge */
+let NOW = 0, CUR = { t0: 0, t1: 1 };
+function shot(img, crop, { right = W - M, top = 168 * U, maxW = 1144 * U, maxH = 848 * U } = {}) {
+  const [sx, sy, sw, sh] = crop, aspect = sw / sh;
+  let w = maxW, h = w / aspect;
+  if (h > maxH) { h = maxH; w = h * aspect; }
+  const x = right - w, y = top;
+  const p = clamp((NOW - CUR.t0) / Math.max(0.001, CUR.t1 - CUR.t0));
+  const z = 1 + 0.016 * p, dy = -10 * U * p;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  ctx.translate(x + w / 2, y + h / 2 + dy);
+  ctx.scale(z, z);
+  ctx.drawImage(img, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
+  ctx.restore();
+  ctx.strokeStyle = INK; ctx.lineWidth = Math.max(1, 1.2 * U);
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  return { x, y, w, h };
+}
+
+/** a small footnote rail, bottom-left, above the bottom rule */
+function notes(lines, x = M, y = 936 * U) {
+  lines.forEach((s, i) => {
+    ctx.globalAlpha = 1;
+    text(s, x, y + i * 24 * U, { f: font(400, 13, MONO), color: MUT, ls: 0.6 });
+  });
+}
+
+/** page furniture: rules, column ticks, kicker, page number, footer */
+function page(idx, kicker, note) {
+  rule(M, W - M, 64 * U, LINE);
+  rule(M, W - M, 1016 * U, LINE);
+  for (let i = 0; i <= COLS; i++) {
+    const x = colX(i) - (i === COLS ? GUT : 0);
+    ctx.fillStyle = 'rgba(18,18,18,0.28)';
+    ctx.fillRect(x, 64 * U, Math.max(1, 1 * U), 7 * U);
+    ctx.fillRect(x, 1009 * U, Math.max(1, 1 * U), 7 * U);
+  }
+  if (kicker) text(kicker, M, 44 * U, { f: font(500, 12.5, MONO), color: MUT, ls: 2.6 });
+  text(String(idx).padStart(2, '0') + ' / 08', W - M, 44 * U, { f: font(500, 12.5, MONO), color: MUT, align: 'right', ls: 2.2 });
+  if (note) text(note, M, 1052 * U, { f: font(400, 13, MONO), color: MUT, ls: 0.8 });
+  text('启动器启动器 · LAUNCHER LAUNCHER · v0.1.0', W - M, 1052 * U, { f: font(400, 13, MONO), color: MUT, align: 'right', ls: 0.8 });
+}
+
+// ── the collapse chain: lines → rule → dot → (reveal) underline ──
+const PATHS = [
+  ['01', 'D:\\Games\\Minecraft\\PCL2\\PCL.exe'],
+  ['02', 'D:\\Games\\Minecraft\\HMCL\\HMCL-3.6.12.exe'],
+  ['03', 'D:\\Minecraft\\BakaXL\\BakaXL.exe'],
+  ['04', 'D:\\Minecraft\\XMCL\\xmcl.exe'],
+  ['05', 'D:\\Games\\MultiMC\\MultiMC.exe'],
+  ['06', 'C:\\Program Files\\Minecraft Launcher\\MinecraftLauncher.exe'],
+];
+
+function hook(t) {
+  page(1, 'SCAN · 本机', '扫描在本地进行，结果不上传');
+  const left = 1 - clamp(seg(t, b(6), b(6.6)));
+  ctx.globalAlpha = left;
+  text('本机扫描：找到 6 个 Minecraft 启动器', M, 208 * U, { f: font(600, 34) });
+  ctx.globalAlpha = 1;
+
+  const collapse = snap(seg(t, b(6), b(6.7)));
+  const shrink = ease.inOutCubic(seg(t, b(6.7), b(7.2)));
+  const alive = 1 - clamp(seg(t, b(6), b(6.55)));
+
+  if (alive > 0.02) {
+    PATHS.forEach(([no, p], i) => {
+      const k = spring(t - (b(0.5) + i * b(0.5)), { freq: 2.6, damp: 0.9 });
+      const y = 300 * U + i * 86 * U - collapse * 24 * U;
+      ctx.globalAlpha = clamp(k) * alive;
+      text(no, M, y, { f: font(400, 13, MONO), color: MUT, ls: 1.4 });
+      text(p, M + 56 * U, y, { f: font(400, 24, MONO), color: INK });
+      rule(M, W - M - 120 * U, y + 26 * U, 'rgba(18,18,18,0.10)');
+      ctx.globalAlpha = 1;
+    });
+  }
+
+  // six lines of paths become one rule, and the rule becomes a point
+  if (t > b(6.1)) {
+    const grow = ease.outQuart(seg(t, b(6.15), b(6.75)));
+    if (shrink < 0.94) {
+      ctx.fillStyle = INK;
+      ctx.fillRect(M, 800 * U - 3 * U, Math.max(900 * U * grow * (1 - shrink), 1), 6 * U);
+    } else {
+      const r = (7 + 3 * spring(t - b(7.2), { freq: 3, damp: 0.7 })) * U;
+      ctx.fillStyle = t >= b(7) ? SIG : INK;
+      ctx.beginPath(); ctx.arc(M + r, 800 * U, r, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // a scan that keeps running underneath
+  const prog = clamp(seg(t, b(0.2), b(6)));
+  ctx.globalAlpha = clamp(seg(t, b(0.3), b(1.1))) * (1 - clamp(seg(t, b(6.1), b(6.6))));
+  text('扫描中 · 上限 9000 个目录 / 9 秒', M, 878 * U, { f: font(400, 12.5, MONO), color: MUT, ls: 1.2 });
+  rule(M, colX(5), 892 * U, 'rgba(18,18,18,0.12)');
+  ctx.fillStyle = SIG;
+  ctx.fillRect(M, 891 * U, (colX(5) - M) * prog, 2 * U);
+  ctx.globalAlpha = 1;
+
+  const ck = clamp(seg(t, b(0.4), b(1.2)));
+  ctx.globalAlpha = ck;
+  const f6 = font(700, 34, MONO), fs = font(400, 20, MONO);
+  const wS = measure(' / 6', fs);
+  text('6', W - M - wS, 208 * U, { f: f6, color: SIG, align: 'right' });
+  text(' / 6', W - M, 208 * U, { f: fs, color: MUT, align: 'right' });
+  ctx.globalAlpha = 1;
+}
+
+function reveal(t) {
+  page(2, 'LAUNCHER LAUNCHER', '一个专门用来启动启动器的启动器');
+  const TITLE = '启动器启动器';
+  const f = font(700, 84);
+  const tw = measure(TITLE, f);
+
+  // the dot stretches into the underline the title will sit on
+  const grow = ease.outQuart(seg(t, b(8), b(8.9)));
+  const dotR = 10 * U * (1 - clamp(seg(t, b(8), b(8.12))));
+  ctx.fillStyle = SIG;
+  if (grow < 0.02) { ctx.beginPath(); ctx.arc(M + dotR, 560 * U, dotR, 0, Math.PI * 2); ctx.fill(); }
+  else ctx.fillRect(M, 560 * U - 3 * U, tw * grow, 6 * U);
+
+  // title wiped up from that baseline
+  const k = ease.outQuint(seg(t, b(8.25), b(9.1)));
+  ctx.save(); clipUp(M - 6 * U, 560 * U - 92 * U, tw + 20 * U, 100 * U, k);
+  text(TITLE, M, 560 * U - 14 * U, { f, color: INK });
+  ctx.restore();
+
+  const sub = ease.outCubic(seg(t, b(8.8), b(9.6)));
+  ctx.globalAlpha = sub;
+  text('LAUNCHER LAUNCHER', M, 606 * U, { f: font(500, 13, MONO), color: MUT, ls: 4.4 });
+  text('一个入口，管理硬盘上所有的启动器。', M, 672 * U, { f: font(400, 21), color: '#3B3833' });
+  ctx.globalAlpha = 1;
+
+  const slide = spring(t - b(8.4), { freq: 1.9, damp: 0.9 });
+  ctx.globalAlpha = clamp(slide * 1.2);
+  shot(IMG.home, [0, 0, 1650, 1110], { top: 168 * U + (1 - slide) * 40 * U });
+  ctx.globalAlpha = 1;
+
+  ctx.globalAlpha = clamp(seg(t, b(9.3), b(10)));
+  text('启动器列表 · 7 条记录', W - M, 992 * U, { f: font(400, 13, MONO), color: MUT, align: 'right', ls: 1.2 });
+  ctx.globalAlpha = 1;
+
+  ctx.globalAlpha = clamp(seg(t, b(9.6), b(10.4)));
+  notes(['7 条记录 · 6 个文件还在 · 1 个已经跑路', '路径、参数、工作目录、标签，全部可编辑']);
+  ctx.globalAlpha = 1;
+}
+
+function scan(t) {
+  page(3, '01 — 收录', '扫描本机 / 拖入文件 / 手动添加');
+  const k = ease.outQuint(seg(t, b(16), b(16.8)));
+  ctx.save(); clipUp(M - 6 * U, 300 * U, 700 * U, 300 * U, k);
+  text('扫描、拖入，', M, 430 * U, { f: font(700, 58) });
+  text('或者手动加一个。', M, 500 * U, { f: font(700, 58) });
+  ctx.restore();
+
+  ctx.globalAlpha = clamp(seg(t, b(16.6), b(17.4)));
+  text('扫描本机', M + 22 * U, 580 * U, { f: font(400, 17, MONO), color: MUT });
+  text('拖入文件', M + 22 * U, 616 * U, { f: font(400, 17, MONO), color: MUT });
+  text('手动添加', M + 22 * U, 652 * U, { f: font(400, 17, MONO), color: MUT });
+  ctx.globalAlpha = 1;
+
+  // the three ways, marked by one blue tick each
+  [0, 1, 2].forEach(i => {
+    const kk = ease.outCubic(seg(t, b(17) + i * b(0.8), b(17.4) + i * b(0.8)));
+    ctx.fillStyle = SIG; ctx.fillRect(M, (573 + i * 36) * U, 8 * U * kk, 8 * U * kk);
+  });
+
+  ctx.globalAlpha = clamp(seg(t, b(17.6), b(18.4)));
+  notes(['.exe / .jar / .lnk 都能收', '扫描上限：9 秒、9000 个目录']);
+  ctx.globalAlpha = 1;
+
+  const s = spring(t - b(16.3), { freq: 2.1, damp: 0.9 });
+  ctx.globalAlpha = clamp(s * 1.2);
+  shot(IMG.editor, [413, 205, 824, 700], { top: 168 * U + (1 - s) * 46 * U });
+  ctx.globalAlpha = 1;
+}
+
+function launch(t) {
+  page(4, '02 — 启动', '同时 / 依次 / 间隔可调');
+  const t0 = b(25), step = b(1);
+  const n = Math.max(0, Math.min(6, Math.floor((t - t0) / step) + 1));
+  const last = t - (t0 + (n - 1) * step);
+  const pop = 1 + 0.09 * Math.max(0, 1 - last / 0.28);
+
+  text('运行中的启动器', M, 300 * U, { f: font(400, 14, MONO), color: MUT, ls: 2.2 });
+  ctx.save();
+  ctx.translate(M, 470 * U); ctx.scale(pop, pop);
+  text(String(n), 0, 0, { f: font(700, 150, MONO), color: t > t0 ? SIG : INK });
+  const nw = measure(String(n), font(700, 150, MONO));
+  text('/ 6', nw + 12 * U, 0, { f: font(400, 46, MONO), color: MUT });
+  ctx.restore();
+
+  const k = ease.outQuint(seg(t, b(24), b(24.8)));
+  ctx.save(); clipUp(M - 6 * U, 560 * U, 760 * U, 240 * U, k);
+  text('一个按钮，', M, 620 * U, { f: font(700, 56) });
+  text('启动全部。', M, 686 * U, { f: font(700, 56) });
+  ctx.restore();
+
+  ctx.globalAlpha = clamp(seg(t, b(24.6), b(25.4)));
+  text('进度按顺序推进，每一行都有回执。', M, 760 * U, { f: font(400, 19), color: '#3B3833' });
+  ctx.globalAlpha = 1;
+
+  ctx.globalAlpha = clamp(seg(t, b(25.4), b(26.2)));
+  notes(['单个启动 / 全部启动 / 按接力顺序启动', '失败会单独报错，不影响其他启动器']);
+  ctx.globalAlpha = 1;
+
+  const s = spring(t - b(24.2), { freq: 2.1, damp: 0.9 });
+  ctx.globalAlpha = clamp(s * 1.2);
+  shot(IMG['run-all'], [383, 208, 884, 695], { top: 168 * U + (1 - s) * 46 * U });
+  ctx.globalAlpha = 1;
+}
+
+const CHAIN = ['PCL2', 'HMCL', 'XMCL'];
+function chain(t) {
+  page(5, '03 — 接力', '等上一个退出，下一个自动进场');
+  const k = ease.outQuint(seg(t, b(36), b(36.8)));
+  ctx.save(); clipUp(M - 6 * U, 300 * U, 760 * U, 240 * U, k);
+  text('一个退出，', M, 430 * U, { f: font(700, 58) });
+  text('下一个进场。', M, 500 * U, { f: font(700, 58) });
+  ctx.restore();
+
+  // the chain, drawn as a diagram: three stops, two connectors
+  const y = 640 * U, x0 = M;
+  const gap = 210 * U;
+  CHAIN.forEach((name, i) => {
+    const lit = t >= b(37) + i * b(1.5) - b(0.2);
+    const x = x0 + i * gap;
+    ctx.fillStyle = lit ? SIG : 'rgba(18,18,18,0.18)';
+    ctx.beginPath(); ctx.arc(x + 7 * U, y - 8 * U, 7 * U, 0, Math.PI * 2); ctx.fill();
+    text(name, x - 4 * U, y + 40 * U, { f: font(500, 21, MONO), color: lit ? INK : '#A8A398', ls: 1.2 });
+    if (i < 2) {
+      const gk = ease.inOutCubic(seg(t, b(38.5) + i * b(1.5) - b(0.9), b(38.5) + i * b(1.5)));
+      rule(x + 22 * U, x + 22 * U + (gap - 34 * U) * gk, y - 8 * U, gk > 0.5 ? SIG : LINE, 2);
+    }
+  });
+  text('第 1 / 3 棒：PCL2 已经起来了，等它退出…', M, 760 * U, { f: font(400, 16, MONO), color: MUT });
+  text('接力进行中', M, 792 * U, { f: font(400, 16, MONO), color: SIG });
+
+  ctx.globalAlpha = clamp(seg(t, b(37.4), b(38.2)));
+  notes(['三种模式：等上一个退出 / 同时启动 / 间隔启动', '接力可以随时停，已经拉起来的不受影响']);
+  ctx.globalAlpha = 1;
+
+  const s = spring(t - b(36.3), { freq: 2.1, damp: 0.9 });
+  ctx.globalAlpha = clamp(s * 1.2);
+  shot(IMG.chain, [360, 186, 1250, 258], { top: 380 * U + (1 - s) * 46 * U });
+  ctx.globalAlpha = 1;
+}
+
+function report(t) {
+  page(6, '04 — 体检', '收录数量 · 失联比例 · 使用频率');
+  const raw = seg(t, b(45), b(46.6));
+  const score = Math.round(89 * ease.outQuint(raw));
+  text('启动器健康指数', M, 300 * U, { f: font(400, 14, MONO), color: MUT, ls: 2.2 });
+
+  const pop = 1 + 0.05 * Math.max(0, 1 - Math.abs(t - b(46)) / 0.3);
+  ctx.save(); ctx.translate(M, 490 * U); ctx.scale(pop, pop);
+  text(String(score), 0, 0, { f: font(700, 170, MONO), color: SIG });
+  const nw = measure(String(score), font(700, 170, MONO));
+  text('/ 100', nw + 14 * U, 0, { f: font(400, 40, MONO), color: MUT });
+  ctx.restore();
+
+  const k = ease.outQuint(seg(t, b(44), b(44.8)));
+  ctx.save(); clipUp(M - 6 * U, 560 * U, 760 * U, 240 * U, k);
+  text('它比你自己更清楚，', M, 620 * U, { f: font(700, 50) });
+  text('你到底用过几个。', M, 682 * U, { f: font(700, 50) });
+  ctx.restore();
+
+  ctx.globalAlpha = clamp(seg(t, b(45.4), b(46.2)));
+  notes(['评分 = 收录数量 · 失联比例 · 使用频率', '报告是纯文本，可以复制走']);
+  ctx.globalAlpha = 1;
+
+  const s = spring(t - b(44.3), { freq: 2.1, damp: 0.9 });
+  ctx.globalAlpha = clamp(s * 1.2);
+  shot(IMG.report, [368, 183, 1249, 474], { top: 420 * U + (1 - s) * 46 * U });
+  ctx.globalAlpha = 1;
+}
+
+function spec(t) {
+  page(7, 'SPEC', '数据存放在 %APPDATA%\\LauncherLauncher\\data.json');
+  text('SPECIFICATION', M, 200 * U, { f: font(500, 13, MONO), color: MUT, ls: 3.2 });
+
+  const k = ease.outQuart(seg(t, b(52), b(52.9)));
+  ctx.save(); clipUp(M - 8 * U, 220 * U, 900 * U, 400 * U, k);
+  text('259', M - 8 * U, 560 * U, { f: font(700, 330, MONO) });
+  ctx.restore();
+  const nw = measure('259', font(700, 330, MONO));
+  ctx.globalAlpha = clamp(seg(t, b(52.5), b(53.1)));
+  text('KB', M + nw + 16 * U, 560 * U, { f: font(700, 76, MONO) });
+  text('单个可执行文件', M, 620 * U, { f: font(500, 26) });
+  ctx.globalAlpha = 1;
+
+  const rows = [
+    ['运行时', '.NET FRAMEWORK 4.8 · WINDOWS 10 / 11 自带'],
+    ['安装', '无需安装运行时，双击即开'],
+    ['数据', '本地 JSON，不上传'],
+    ['依赖', 'Electron 0 · 遥测 0 · 后台常驻 0'],
+  ];
+  rows.forEach(([k1, v], i) => {
+    const rk = ease.outCubic(seg(t, b(53) + i * b(1), b(53.5) + i * b(1)));
+    ctx.globalAlpha = rk;
+    const y = 250 * U + i * 66 * U;
+    text(k1, colX(8), y, { f: font(500, 15, MONO), color: MUT, ls: 2 });
+    text(v, colX(8), y + 30 * U, { f: font(400, 21), color: INK });
+    rule(colX(8), W - M, y + 44 * U, 'rgba(18,18,18,0.12)');
+    ctx.globalAlpha = 1;
+  });
+
+  text('启动器启动器', M, 900 * U, { f: font(700, 72) });
+  text('LAUNCHER LAUNCHER', M, 936 * U, { f: font(500, 13, MONO), color: MUT, ls: 4.2 });
+}
+
+function end(t) {
+  ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
+
+  // the blue rule survives the cut and becomes the mark on the dark page
+  const k = ease.outQuint(seg(t, b(60.3), b(61)));
+  ctx.fillStyle = SIG; ctx.fillRect(M, 520 * U - 3 * U, 560 * U * k, 6 * U);
+
+  const lk = spring(t - b(61), { freq: 2.2, damp: 0.85 });
+  ctx.globalAlpha = clamp(lk);
+  ctx.save(); ctx.translate(M, 300 * U); ctx.translate(0, (1 - lk) * 18 * U);
+  ctx.drawImage(IMG.logo, 0, 0, 96 * U, 96 * U);
+  ctx.restore();
+
+  const tk = ease.outQuint(seg(t, b(61.2), b(62)));
+  ctx.save(); clipUp(M + 130 * U, 300 * U, 900 * U, 120 * U, tk);
+  text('启动器启动器', M + 130 * U, 382 * U, { f: font(700, 78), color: PAPER });
+  ctx.restore();
+
+  ctx.globalAlpha = clamp(seg(t, b(61.6), b(62.4)));
+  text('LAUNCHER LAUNCHER · v0.1.0', M + 132 * U, 424 * U, { f: font(500, 13, MONO), color: '#8C8F94', ls: 3.4 });
+  text('所有启动器，一个入口。', M, 600 * U, { f: font(400, 34), color: PAPER });
+  text('WPF · .NET FRAMEWORK 4.8 · 259 KB', M, 660 * U, { f: font(400, 16, MONO), color: '#8C8F94', ls: 1.6 });
+  ctx.globalAlpha = 1;
+}
+
+// ── transitions: an ink block sweeps the page ──
+const WIPES = [b(16), b(24), b(36), b(44), b(52), b(60)];
+const WIPE_T = 0.15;
+function blockWipe(t) {
+  for (const T of WIPES) {
+    if (t < T - WIPE_T || t > T + WIPE_T) continue;
+    if (t < T) {
+      const k = ease.inOutCubic(seg(t, T - WIPE_T, T));
+      const x = lerp(W, 0, k);
+      ctx.fillStyle = INK; ctx.fillRect(x, 0, W - x + 1, H);
+    } else {
+      const k = ease.inOutCubic(seg(t, T, T + WIPE_T));
+      const x = -W * k;
+      ctx.fillStyle = INK; ctx.fillRect(x, 0, W + 1, H);
+    }
+    return;
+  }
+}
+
+const PAGES = { hook, reveal, scan, launch, chain, report, spec, end };
+const IDX = { hook: 1, reveal: 2, scan: 3, launch: 4, chain: 5, report: 6, spec: 7, end: 8 };
+
+await Promise.all(['home', 'editor', 'run-all', 'chain', 'report', 'logo'].map(async n => { IMG[n] = await loadImage(`./assets/${n}.png`); }));
+await loadFonts([font(700, 84), font(700, 58), font(700, 330, MONO), font(400, 21), font(400, 13, MONO), font(500, 13, MONO)]);
+
+window.DUR = DUR;
+window.render = t => {
+  ctx.save();
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = PAPER; ctx.fillRect(0, 0, W, H);
+
+  NOW = t;
+  const sh = SHOTS.find(s => t >= s.t0 && t < s.t1) || SHOTS[SHOTS.length - 1];
+  CUR = sh;
+  (PAGES[sh.id] || hook)(t);
+
+  blockWipe(t);
+  ctx.restore();
+};
+
+window.render(0);
+window.READY = true;
+</script>
+</body>
+</html>

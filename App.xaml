@@ -1,0 +1,19 @@
+<Application x:Class="LauncherLauncher.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:u="clr-namespace:LauncherLauncher.Util"
+             ShutdownMode="OnMainWindowClose">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Styles/Theme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <BooleanToVisibilityConverter x:Key="BoolToVis" />
+            <u:InverseBoolToVisibilityConverter x:Key="InvBoolToVis" />
+            <u:NotNullToVisibilityConverter x:Key="NotNullToVis" />
+            <u:NullToVisibilityConverter x:Key="NullToVis" />
+            <u:ScoreToBrushConverter x:Key="ScoreToBrush" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

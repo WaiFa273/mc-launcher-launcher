@@ -1,0 +1,229 @@
+<UserControl x:Class="LauncherLauncher.Views.HomePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="24,20,18,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!--  标题  -->
+        <Grid Grid.Row="0" Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Style="{StaticResource Text.H1}" Text="启动器列表" />
+                    <Border Margin="10,5,0,0" Padding="7,2" VerticalAlignment="Center" CornerRadius="6"
+                            Background="{StaticResource Brush.AccentSoft}">
+                        <TextBlock x:Name="CountChip" FontSize="11" FontWeight="SemiBold"
+                                   Foreground="{StaticResource Brush.Accent}" Text="0 个" />
+                    </Border>
+                </StackPanel>
+                <TextBlock x:Name="SubtitleText" Margin="0,6,0,0" Style="{StaticResource Text.Caption}"
+                           Text="还没有启动器。这个软件此刻正在怀疑自己的人生。" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Margin="12,0,0,0" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="ScanBtn" Style="{StaticResource Btn.Secondary}" Click="Scan_Click"
+                        ToolTip="扫一遍本机，看看有哪些启动器在偷偷运行（F5）">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="{StaticResource Font.Icons}" FontSize="12" Text="&#xE721;" />
+                        <TextBlock Margin="7,0,0,0" Text="扫描本机" />
+                    </StackPanel>
+                </Button>
+                <Button Margin="8,0,0,0" Style="{StaticResource Btn.Secondary}" Click="Add_Click"
+                        ToolTip="手动录入一个启动器（Ctrl+N）">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="{StaticResource Font.Icons}" FontSize="12" Text="&#xE710;" />
+                        <TextBlock Margin="7,0,0,0" Text="添加启动器" />
+                    </StackPanel>
+                </Button>
+                <Button Margin="8,0,0,0" Style="{StaticResource Btn.Primary}" Click="LaunchAll_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="{StaticResource Font.Icons}" FontSize="11" Text="&#xE768;" />
+                        <TextBlock Margin="7,0,0,0" Text="一键启动全部" />
+                    </StackPanel>
+                </Button>
+                <Button Margin="8,0,0,0" Style="{StaticResource Btn.Danger}" Click="Nest_Click"
+                        ToolTip="启动「启动器启动器」它自己。真的别点。">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="{StaticResource Font.Icons}" FontSize="12" Text="&#xE7BA;" />
+                        <TextBlock Margin="7,0,0,0" Text="千万别点" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!--  搜索与排序  -->
+        <Grid Grid.Row="1" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0" Width="290" HorizontalAlignment="Left">
+                <TextBox x:Name="SearchBox" Height="34" Padding="32,0,12,0" Style="{StaticResource Input}"
+                         TextChanged="Search_TextChanged" />
+                <TextBlock Margin="11,0,0,0" VerticalAlignment="Center" FontFamily="{StaticResource Font.Icons}"
+                           FontSize="12" Foreground="{StaticResource Brush.TextTertiary}" Text="&#xE721;"
+                           IsHitTestVisible="False" />
+                <TextBlock x:Name="SearchHint" Margin="32,0,0,0" VerticalAlignment="Center" FontSize="12"
+                           Foreground="{StaticResource Brush.TextTertiary}" Text="搜索名称、路径、标签…"
+                           IsHitTestVisible="False" />
+            </Grid>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Margin="0,0,9,0" VerticalAlignment="Center" Style="{StaticResource Text.Caption}" Text="排序" />
+                <Border Padding="3" Background="{StaticResource Brush.Muted}" CornerRadius="9">
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton x:Name="SortRecent" Style="{StaticResource Seg}" Content="最近" IsChecked="True"
+                                     Checked="Sort_Checked" />
+                        <RadioButton x:Name="SortName" Style="{StaticResource Seg}" Content="名称" Checked="Sort_Checked" />
+                        <RadioButton x:Name="SortCount" Style="{StaticResource Seg}" Content="次数" Checked="Sort_Checked" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <!--  列表  -->
+        <Grid Grid.Row="2">
+            <ScrollViewer x:Name="ListScroll" VerticalScrollBarVisibility="Auto" Style="{StaticResource ScrollViewer.Clean}">
+                <ItemsControl x:Name="List" Padding="0,0,8,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border x:Name="CardBorder" Margin="0,0,0,10" Padding="14,12"
+                                    Style="{StaticResource Card}"
+                                    MouseLeftButtonDown="Card_MouseDown"
+                                    MouseRightButtonUp="Card_RightUp">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <Border Width="46" Height="46" CornerRadius="11" VerticalAlignment="Center"
+                                            Background="#F5F8FE" BorderBrush="#E9EEF8" BorderThickness="1">
+                                        <Grid>
+                                            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       FontSize="18" FontWeight="SemiBold" Text="{Binding Initial}"
+                                                       Foreground="{StaticResource Brush.TextTertiary}"
+                                                       Visibility="{Binding HasIcon, Converter={StaticResource InvBoolToVis}}" />
+                                            <Image Width="26" Height="26" Source="{Binding IconSource}"
+                                                   RenderOptions.BitmapScalingMode="HighQuality"
+                                                   Visibility="{Binding HasIcon, Converter={StaticResource BoolToVis}}" />
+                                        </Grid>
+                                    </Border>
+
+                                    <StackPanel Grid.Column="1" Margin="13,0,12,0" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock MaxWidth="260" VerticalAlignment="Center" FontSize="14.5"
+                                                       FontWeight="SemiBold" Text="{Binding DisplayName}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <Border Margin="8,0,0,0" Padding="6,1" VerticalAlignment="Center" CornerRadius="5"
+                                                    Background="{StaticResource Brush.Muted}">
+                                                <TextBlock FontSize="10.5" Text="{Binding KindText}"
+                                                           Foreground="{StaticResource Brush.TextTertiary}" />
+                                            </Border>
+                                            <Border Margin="6,0,0,0" Padding="6,1" VerticalAlignment="Center" CornerRadius="5"
+                                                    Background="{StaticResource Brush.WarnSoft}"
+                                                    Visibility="{Binding RunAsAdmin, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock FontSize="10.5" Text="管理员"
+                                                           Foreground="{StaticResource Brush.Warn}" />
+                                            </Border>
+                                            <Border Margin="6,0,0,0" Padding="6,1" VerticalAlignment="Center" CornerRadius="5"
+                                                    Background="{StaticResource Brush.DangerSoft}"
+                                                    Visibility="{Binding Missing, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock FontSize="10.5" Text="文件不存在"
+                                                           Foreground="{StaticResource Brush.Danger}" />
+                                            </Border>
+                                        </StackPanel>
+
+                                        <TextBlock Margin="0,4,0,0" FontSize="11.5" Text="{Binding Path}"
+                                                   TextTrimming="CharacterEllipsis" ToolTip="{Binding Path}"
+                                                   Foreground="{StaticResource Brush.TextTertiary}"
+                                                   Visibility="{Binding Tag, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToVis}}" />
+
+                                        <ItemsControl Margin="0,6,0,0" ItemsSource="{Binding TagList}"
+                                                      Visibility="{Binding HasTags, Converter={StaticResource BoolToVis}}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Margin="0,0,5,0" Padding="6,1" CornerRadius="5"
+                                                            Background="{StaticResource Brush.Muted}">
+                                                        <TextBlock FontSize="10.5" Text="{Binding}"
+                                                                   Foreground="{StaticResource Brush.TextSecondary}" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="2" MinWidth="92" Margin="0,0,14,0" VerticalAlignment="Center">
+                                        <TextBlock HorizontalAlignment="Right" FontSize="12" Text="{Binding LaunchCountText}"
+                                                   Foreground="{StaticResource Brush.TextSecondary}" />
+                                        <TextBlock Margin="0,3,0,0" HorizontalAlignment="Right" FontSize="11"
+                                                   Text="{Binding LastLaunchText}"
+                                                   Foreground="{StaticResource Brush.TextTertiary}" />
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Style="{StaticResource Btn.Primary.Small}" Content="启动" Click="Launch_Click" />
+                                        <Button Margin="6,0,0,0" Style="{StaticResource Btn.Icon}" Click="More_Click"
+                                                ToolTip="更多操作">
+                                            <TextBlock FontFamily="{StaticResource Font.Icons}" FontSize="14" Text="&#xE712;" />
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource Brush.Accent}" />
+                                    <Setter TargetName="CardBorder" Property="BorderThickness" Value="1.5" />
+                                    <Setter TargetName="CardBorder" Property="Background" Value="#FBFCFE" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Missing}" Value="True">
+                                    <Setter TargetName="CardBorder" Property="Opacity" Value="0.75" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <Border x:Name="EmptyState" MaxWidth="440" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Visibility="Collapsed">
+                <StackPanel>
+                    <Border Width="72" Height="72" CornerRadius="36" HorizontalAlignment="Center"
+                            Background="{StaticResource Brush.AccentSoft}">
+                        <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="30"
+                                   FontFamily="{StaticResource Font.Icons}" Text="&#xE7FC;"
+                                   Foreground="{StaticResource Brush.Accent}" />
+                    </Border>
+                    <TextBlock x:Name="EmptyTitle" Margin="0,16,0,0" HorizontalAlignment="Center"
+                               Style="{StaticResource Text.H2}" Text="一个启动器都没有" />
+                    <TextBlock x:Name="EmptyText" Margin="0,8,0,0" HorizontalAlignment="Center" FontSize="12.5"
+                               TextAlignment="Center" TextWrapping="Wrap" LineHeight="21"
+                               Foreground="{StaticResource Brush.TextSecondary}"
+                               Text="没有启动器，就没有启动器可以启动。这是个哲学问题。" />
+                    <StackPanel Margin="0,18,0,0" HorizontalAlignment="Center" Orientation="Horizontal">
+                        <Button Style="{StaticResource Btn.Primary}" Content="扫描本机" Click="Scan_Click" />
+                        <Button Margin="8,0,0,0" Style="{StaticResource Btn.Secondary}" Content="手动添加" Click="Add_Click" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

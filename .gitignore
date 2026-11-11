@@ -1,0 +1,16 @@
+bin/
+obj/
+publish/
+.sizetest/
+*.user
+*.suo
+.vs/
+promo/audio/
+promo/out/
+promo/qa/
+promo/.showreel-editor/
+promo/node_modules/
+*.mp4
+*.wav
+Thumbs.db
+desktop.ini

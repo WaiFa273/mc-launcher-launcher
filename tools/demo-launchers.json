@@ -1,0 +1,14 @@
+[
+  { "file": "PCL2.exe", "letter": "P", "r": 46, "g": 107, "b": 255, "title": "PCL2", "message": "Plain Craft Launcher 2",
+    "popup": "这是启动器启动器的示例启动器（其实不是真的 PCL2）。\n\n它启动不了 Minecraft，但它自己能启动——这一点已经比本机的某些启动器强了。" },
+  { "file": "HMCL.exe", "letter": "H", "r": 18, "g": 153, "b": 107, "title": "HMCL", "message": "Hello Minecraft! Launcher",
+    "popup": "这是启动器启动器的示例启动器（其实不是真的 HMCL）。\n\n它只会弹这个对话框，但它弹得比某些启动器稳。" },
+  { "file": "BakaXL.exe", "letter": "B", "r": 229, "g": 72, "b": 77, "title": "BakaXL", "message": "BakaXL Launcher",
+    "popup": "这是启动器启动器的示例启动器（其实不是真的 BakaXL）。\n\n八嘎，你居然真的把它点开了。" },
+  { "file": "XMCL.exe", "letter": "X", "r": 124, "g": 77, "b": 255, "title": "XMCL", "message": "X Minecraft Launcher",
+    "popup": "这是启动器启动器的示例启动器（其实不是真的 XMCL）。\n\n它的 Electron 外壳比真货轻了大概一百倍。" },
+  { "file": "MultiMC.exe", "letter": "M", "r": 196, "g": 118, "b": 26, "title": "MultiMC", "message": "MultiMC 5",
+    "popup": "这是启动器启动器的示例启动器（其实不是真的 MultiMC）。\n\n多实例的意思是你有很多个它，而它一个实例也没有。" },
+  { "file": "MinecraftLauncher.exe", "letter": "O", "r": 23, "g": 27, "b": 38, "title": "官方启动器", "message": "Minecraft Launcher",
+    "popup": "这是启动器启动器的示例启动器（其实不是真的官方启动器）。\n\n官方启动器的特点是官方，这个示例的特点是存在。" }
+]
